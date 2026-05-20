@@ -1,0 +1,34 @@
+.game-wrap {
+  width: min(100%, 430px);
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+}
+
+.top-ui {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.canvas-frame {
+  width: min(100%, 420px);
+  border: 4px solid var(--line);
+  box-shadow: 0 10px 0 #0a0f0d, 0 22px 36px rgba(0, 0, 0, 0.45);
+  background: #0d1512;
+  border-radius: 8px;
+  padding: 6px;
+}
+
+@media (max-width: 860px) {
+  .top-ui {
+    justify-content: center;
+  }
+
+  .game-wrap {
+    width: min(100%, 400px);
+  }
+}

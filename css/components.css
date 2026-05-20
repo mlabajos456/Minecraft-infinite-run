@@ -1,0 +1,39 @@
+.status-pill {
+  background: #203428;
+  border: 2px solid #3f694c;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  box-shadow: 0 4px 0 #112015;
+}
+
+.status-pill.manual {
+  background: #3a1f1f;
+  border-color: #7f3131;
+  box-shadow: 0 4px 0 #261111;
+}
+
+.hint {
+  opacity: 0.86;
+  font-size: 13px;
+  text-align: right;
+  line-height: 1.35;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #70b7ff;
+  border: 3px solid #2d3a35;
+}
+
+@media (max-width: 860px) {
+  .hint {
+    text-align: center;
+  }
+}
