@@ -5,6 +5,10 @@ export function bindInput(game, actions) {
   function onKeyDown(event) {
     const code = event.code;
 
+    if (!state.running) {
+      state.gameOverHasInput = true;
+    }
+
     if (code === "Space") {
       event.preventDefault();
       if (!state.running) {

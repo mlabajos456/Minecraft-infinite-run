@@ -73,7 +73,9 @@ function animationFrame(timestamp) {
 
 function procesarComandoStream(comando) {
   const normalized = String(comando ?? "").trim();
-  if (normalized !== "HEROBRINE") return false;
+  const cleaned = normalized.replace(/^!+/, "").toUpperCase();
+  const token = cleaned.split(/\s+/)[0];
+  if (token !== "HEROBRINE") return false;
 
   const activated = gameplay.activateHerobrineFromStream();
   if (!activated) return false;

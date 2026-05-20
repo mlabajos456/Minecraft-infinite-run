@@ -18,7 +18,8 @@ export const CONFIG = {
   herobrineDestroyDistance: 120,
   herobrineDestroyBonus: 150,
   herobrineStreamExtendFrames: 180,
-  streamAlertFrames: 120
+  streamAlertFrames: 120,
+  autoRestartDelayMs: 5000
 };
 
 export const COLORS = {

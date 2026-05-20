@@ -7,7 +7,7 @@ const POWER_TYPES = {
 };
 
 export function createGameplaySystems(game) {
-  const { CONFIG, COLORS, state, player, input, isNightPhase } = game;
+  const { CONFIG, COLORS, state, player, input, isNightPhase, resetRun } = game;
 
   function emitParticles(x, y, count, palette, spreadX, spreadY, speed, life, size) {
     for (let i = 0; i < count; i++) {
@@ -248,9 +248,34 @@ export function createGameplaySystems(game) {
     return CONFIG.jumpVelocity;
   }
 
-  function triggerJump() {
+  function getAutopilotJumpVelocity(obstacle) {
+    const baseMagnitude = Math.abs(getJumpVelocity());
+    const requiredLift = obstacle.height + (obstacle.type === "tree" ? 8 : 6);
+    const minMagnitude = Math.sqrt(Math.max(0, 2 * CONFIG.gravity * requiredLift));
+    const buffer = obstacle.type === "tree" ? 0.9 : obstacle.type === "creeper" ? 0.7 : 0.6;
+    const tunedMagnitude = clamp(minMagnitude + buffer, 8.2, baseMagnitude);
+    return -tunedMagnitude;
+  }
+
+  function controlAutopilotAirborne(nextObstacle) {
+    if (!nextObstacle || nextObstacle.type === "phantom" || player.onGround) return;
+
+    const liftFromGround = CONFIG.groundTop - (player.y + player.height);
+    const desiredLift = nextObstacle.height + 10;
+    const distance = nextObstacle.x - (player.x + player.width);
+
+    if (liftFromGround > desiredLift + 18 && player.vy < -2) {
+      player.vy = Math.max(player.vy, -3.2);
+    }
+
+    if (distance < -nextObstacle.width * 0.2 && player.y + player.height < CONFIG.groundTop - 2) {
+      player.vy += CONFIG.gravity * 1.65;
+    }
+  }
+
+  function triggerJump(customVelocity) {
     if (!player.canJump()) return;
-    player.vy = getJumpVelocity();
+    player.vy = customVelocity ?? getJumpVelocity();
     player.onGround = false;
     spawnLandingDust(3);
   }
@@ -281,31 +306,50 @@ export function createGameplaySystems(game) {
       return;
     }
 
+    const speed = Math.max(0.001, state.speed);
     const distance = next.x - (player.x + player.width);
 
     if (next.type === "phantom") {
-      const duckStart = clamp(92 + state.speed * 7, 90, 160);
-      if (distance < duckStart && distance > -next.width - 4) {
-        player.forcedDuckUntilX = next.x + next.width + 8;
-      }
+      const duckStartDistance = speed * 12;
+      const duckEndDistance = -next.width - 4;
+      input.duckHeld = distance <= duckStartDistance && distance > duckEndDistance;
+      player.forcedDuckUntilX = null;
     } else {
+      input.duckHeld = false;
+      player.forcedDuckUntilX = null;
+
       if (isHerobrineActive() && (next.type === "tree" || next.type === "creeper")) {
-        player.forcedDuckUntilX = null;
-        input.duckHeld = false;
         return;
       }
-      const jumpRange = clamp(74 + state.speed * 9 + next.width * 0.45, 92, 200);
-      if (distance > 0 && distance < jumpRange && player.onGround) {
-        triggerJump();
+
+      const jumpVelocity = getJumpVelocity();
+      const framesToImpact = distance / speed;
+      const ascentFrames = Math.abs(jumpVelocity / CONFIG.gravity);
+      const frontFrames = framesToImpact;
+      const overlapFrames = (next.width + player.width) / speed;
+      const requiredHeight = next.height + 6;
+      const typeLead = next.type === "tree" ? 1.2 : next.type === "creeper" ? 0.9 : 0.7;
+      const targetImpactFrames = clamp(ascentFrames - overlapFrames * 0.35 - typeLead, 8, 20);
+      const triggerTolerance = 1.8;
+      const shouldTriggerByTiming = framesToImpact <= targetImpactFrames + triggerTolerance;
+
+      const getJumpHeightAtFrame = (frame) => {
+        if (frame <= 0) return 0;
+        const displacement = frame * jumpVelocity + (CONFIG.gravity * frame * (frame + 1)) / 2;
+        return Math.max(0, -displacement);
+      };
+
+      const heightAtFront = getJumpHeightAtFrame(frontFrames);
+      const heightAtBack = getJumpHeightAtFrame(frontFrames + overlapFrames);
+      const minHeightDuringCrossing = Math.min(heightAtFront, heightAtBack);
+      const canClearNow = minHeightDuringCrossing >= requiredHeight;
+
+      if (distance > speed && player.onGround && shouldTriggerByTiming && canClearNow) {
+        triggerJump(getAutopilotJumpVelocity(next));
       }
     }
 
-    if (player.forcedDuckUntilX !== null && next.type === "phantom" && next.x + next.width > player.x - 6) {
-      input.duckHeld = true;
-    } else if (player.forcedDuckUntilX !== null && next.x + next.width <= player.x - 6) {
-      player.forcedDuckUntilX = null;
-      input.duckHeld = false;
-    }
+    controlAutopilotAirborne(next);
   }
 
   function handlePowerItemCollision() {
@@ -358,6 +402,32 @@ export function createGameplaySystems(game) {
         continue;
       }
 
+      if (state.autopilot) {
+        const palette = obstacle.type === "phantom"
+          ? ["#2f394f", "#7ca6df", "#9ac3ff"]
+          : obstacle.type === "cactus"
+          ? ["#62bb42", "#3f8a29", "#83df5f"]
+          : obstacle.type === "creeper"
+          ? ["#60dd78", "#327a46", "#a2f2b2"]
+          : ["#6c4d32", "#4c8e36", "#336b29"];
+
+        spawnObstacleBurst(obstacle, palette);
+
+        if (obstacle.type === "phantom") {
+          input.duckHeld = true;
+          setDuck(true);
+        } else if (player.onGround) {
+          player.vy = getJumpVelocity() * 0.88;
+          player.onGround = false;
+        } else {
+          player.vy = Math.min(player.vy, -6.5);
+        }
+
+        state.obstacles.splice(i, 1);
+        state.score += 8;
+        continue;
+      }
+
       if (obstacle.type === "creeper") {
         obstacle.blinkMs = 280;
         player.blinkTimer = 280;
@@ -369,6 +439,8 @@ export function createGameplaySystems(game) {
       }
 
       state.running = false;
+      state.gameOverTimerMs = 0;
+      state.gameOverHasInput = false;
       if (state.score > state.highScore) {
         state.highScore = Math.floor(state.score);
         localStorage.setItem(CONFIG.highScoreKey, String(state.highScore));
@@ -425,6 +497,13 @@ export function createGameplaySystems(game) {
       state.gameOverAlpha = clamp(state.gameOverAlpha + dt * 0.0024, 0, 0.85);
       state.impactFlashMs = Math.max(0, state.impactFlashMs - dt);
       player.blinkTimer = Math.max(0, player.blinkTimer - dt);
+
+      if (!state.gameOverHasInput) {
+        state.gameOverTimerMs += dt;
+        if (state.gameOverTimerMs >= CONFIG.autoRestartDelayMs) {
+          resetRun();
+        }
+      }
       return;
     }
 

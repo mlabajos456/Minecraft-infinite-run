@@ -31,6 +31,8 @@ export function createGameContext({ canvas, modePill, CONFIG, COLORS }) {
       text: "",
       timerFrames: 0
     },
+    gameOverTimerMs: 0,
+    gameOverHasInput: false,
     itemPoder: null,
     powerRollBlock: -1
   };
@@ -103,6 +105,8 @@ export function createGameContext({ canvas, modePill, CONFIG, COLORS }) {
     state.herobrineControl.cooldownFrames = 0;
     state.streamFx.text = "";
     state.streamFx.timerFrames = 0;
+    state.gameOverTimerMs = 0;
+    state.gameOverHasInput = false;
     state.itemPoder = null;
     state.powerRollBlock = -1;
 
