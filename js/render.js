@@ -303,6 +303,22 @@ export function createRenderer(game, ctx) {
     ctx.textAlign = "start";
   }
 
+  function drawStreamAlert(now) {
+    if (state.streamFx.timerFrames <= 0 || !state.streamFx.text) return;
+
+    const blinkOn = Math.floor(now / 120) % 2 === 0;
+    if (!blinkOn) return;
+
+    ctx.textAlign = "center";
+    ctx.font = "bold 15px monospace";
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#3a004f";
+    ctx.lineWidth = 3;
+    ctx.strokeText(state.streamFx.text, CONFIG.width / 2, 128);
+    ctx.fillText(state.streamFx.text, CONFIG.width / 2, 128);
+    ctx.textAlign = "start";
+  }
+
   function render(now) {
     drawSky();
     drawParallax();
@@ -314,6 +330,7 @@ export function createRenderer(game, ctx) {
     drawSteve(now);
     drawParticles();
     drawUI();
+    drawStreamAlert(now);
 
     if (state.impactFlashMs > 0) {
       ctx.fillStyle = `rgba(255, 255, 255, ${state.impactFlashMs / 300})`;

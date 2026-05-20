@@ -22,6 +22,44 @@
   line-height: 1.35;
 }
 
+.power-btn {
+  border: 2px solid #6b6b6b;
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #1a1a1a;
+}
+
+.power-btn.ready {
+  border-color: #8f7cff;
+  background: #281544;
+  color: #f2ecff;
+  box-shadow: 0 4px 0 #180b2d;
+}
+
+.power-btn.active {
+  border-color: #ffffff;
+  background: #120022;
+  color: #ffffff;
+  box-shadow: 0 4px 0 #090012;
+}
+
+.power-btn.cooldown {
+  border-color: #5f5f5f;
+  background: #202020;
+  color: #b9b9b9;
+}
+
+.power-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.92;
+}
+
 canvas {
   display: block;
   width: 100%;

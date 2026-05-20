@@ -181,6 +181,39 @@ export function createGameplaySystems(game) {
       : CONFIG.powerDurationFrames;
   }
 
+  function tryActivateHerobrine() {
+    if (!state.running) return false;
+    if (state.poderActivo.tipo === POWER_TYPES.HEROBRINE) return false;
+    if (!state.herobrineControl.ready) return false;
+    if (state.herobrineControl.cooldownFrames > 0) return false;
+
+    state.herobrineControl.ready = false;
+    state.herobrineControl.cooldownFrames = CONFIG.herobrineCooldownFrames;
+    activatePower(POWER_TYPES.HEROBRINE);
+    return true;
+  }
+
+  function activateHerobrineFromStream() {
+    if (!state.running) return false;
+
+    if (state.poderActivo.tipo === POWER_TYPES.HEROBRINE) {
+      const cap = CONFIG.herobrineDurationFrames * 2;
+      state.poderActivo.tiempoRestante = Math.min(
+        cap,
+        state.poderActivo.tiempoRestante + CONFIG.herobrineStreamExtendFrames
+      );
+      return true;
+    }
+
+    state.herobrineControl.ready = false;
+    state.herobrineControl.cooldownFrames = Math.max(
+      state.herobrineControl.cooldownFrames,
+      CONFIG.herobrineCooldownFrames
+    );
+    activatePower(POWER_TYPES.HEROBRINE);
+    return true;
+  }
+
   function isHerobrineActive() {
     return state.poderActivo.tipo === POWER_TYPES.HEROBRINE;
   }
@@ -193,6 +226,19 @@ export function createGameplaySystems(game) {
 
     state.poderActivo.tipo = null;
     state.poderActivo.tiempoRestante = 0;
+  }
+
+  function updateHerobrineCooldown(step) {
+    if (state.herobrineControl.cooldownFrames <= 0) return;
+    state.herobrineControl.cooldownFrames = Math.max(0, state.herobrineControl.cooldownFrames - step);
+  }
+
+  function updateStreamFx(step) {
+    if (state.streamFx.timerFrames <= 0) return;
+    state.streamFx.timerFrames = Math.max(0, state.streamFx.timerFrames - step);
+    if (state.streamFx.timerFrames === 0) {
+      state.streamFx.text = "";
+    }
   }
 
   function getJumpVelocity() {
@@ -269,7 +315,15 @@ export function createGameplaySystems(game) {
     if (!aabbIntersects(hero, state.itemPoder)) return;
 
     const item = state.itemPoder;
-    activatePower(item.tipo);
+    if (item.tipo === POWER_TYPES.HEROBRINE) {
+      if (state.poderActivo.tipo !== POWER_TYPES.HEROBRINE && state.herobrineControl.cooldownFrames <= 0) {
+        state.herobrineControl.ready = true;
+      } else {
+        state.score += 20;
+      }
+    } else {
+      activatePower(item.tipo);
+    }
 
     const colors = item.tipo === POWER_TYPES.GOLDEN_APPLE
       ? ["#f4d25b", "#fff59a", "#ffe27c"]
@@ -381,6 +435,8 @@ export function createGameplaySystems(game) {
 
     updateBiome();
     updateActivePower(step);
+    updateHerobrineCooldown(step);
+    updateStreamFx(step);
 
     state.clouds.forEach((cloud) => {
       cloud.x -= cloud.speed * step;
@@ -487,6 +543,8 @@ export function createGameplaySystems(game) {
 
   return {
     updateWorld,
+    tryActivateHerobrine,
+    activateHerobrineFromStream,
     POWER_TYPES
   };
 }

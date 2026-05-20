@@ -23,6 +23,14 @@ export function createGameContext({ canvas, modePill, CONFIG, COLORS }) {
       tipo: null,
       tiempoRestante: 0
     },
+    herobrineControl: {
+      ready: false,
+      cooldownFrames: 0
+    },
+    streamFx: {
+      text: "",
+      timerFrames: 0
+    },
     itemPoder: null,
     powerRollBlock: -1
   };
@@ -91,6 +99,10 @@ export function createGameContext({ canvas, modePill, CONFIG, COLORS }) {
     state.biome = "plains";
     state.poderActivo.tipo = null;
     state.poderActivo.tiempoRestante = 0;
+    state.herobrineControl.ready = false;
+    state.herobrineControl.cooldownFrames = 0;
+    state.streamFx.text = "";
+    state.streamFx.timerFrames = 0;
     state.itemPoder = null;
     state.powerRollBlock = -1;
 

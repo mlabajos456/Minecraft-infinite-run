@@ -11,11 +11,14 @@ export const CONFIG = {
   highScoreKey: "minecraft_runner_highscore",
   powerDurationFrames: 300,
   herobrineDurationFrames: 420,
+  herobrineCooldownFrames: 660,
   powerSpawnChance: 0.01,
   powerRollBlockSize: 120,
   powerCrashBonus: 65,
   herobrineDestroyDistance: 120,
-  herobrineDestroyBonus: 150
+  herobrineDestroyBonus: 150,
+  herobrineStreamExtendFrames: 180,
+  streamAlertFrames: 120
 };
 
 export const COLORS = {

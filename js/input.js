@@ -1,5 +1,6 @@
-export function bindInput(game) {
+export function bindInput(game, actions) {
   const { state, input, disableAutopilot, resetRun } = game;
+  const { tryActivateHerobrine } = actions;
 
   function onKeyDown(event) {
     const code = event.code;
@@ -26,6 +27,10 @@ export function bindInput(game) {
 
     if (code === "ArrowLeft" || code === "ArrowRight") {
       disableAutopilot();
+    }
+
+    if (code === "KeyH") {
+      tryActivateHerobrine();
     }
 
   }
