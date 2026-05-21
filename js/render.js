@@ -1,4 +1,4 @@
-import { clamp } from "./utils.js";
+﻿import { clamp } from "./utils.js";
 
 const POWER_TYPES = {
   GOLDEN_APPLE: "MANZANA_DORADA",
@@ -7,7 +7,7 @@ const POWER_TYPES = {
 };
 
 export function createRenderer(game, ctx) {
-  const { CONFIG, COLORS, state, player, getSkyColors } = game;
+  const { CONFIG, COLORS, state, getSkyColors } = game;
 
   function drawPixelCloud(x, y, w, h) {
     ctx.fillStyle = COLORS.cloud;
@@ -17,146 +17,7 @@ export function createRenderer(game, ctx) {
     ctx.fillRect(x + 6, y - 3, w - 12, 4);
   }
 
-  function drawPhantom(obstacle) {
-    const flap = Math.sin((state.score + obstacle.x) * 0.06) > 0 ? 2 : -1;
-    ctx.fillStyle = obstacle.blinkMs > 0 && Math.floor(obstacle.blinkMs / 35) % 2 ? "#ffffff" : "#4f607d";
-    ctx.fillRect(obstacle.x + 8, obstacle.y + 6, obstacle.width - 16, obstacle.height - 6);
-    ctx.fillRect(obstacle.x + 2, obstacle.y + 8 + flap, 10, 4);
-    ctx.fillRect(obstacle.x + obstacle.width - 12, obstacle.y + 8 - flap, 10, 4);
-    ctx.fillStyle = "#8cb2ff";
-    ctx.fillRect(obstacle.x + 14, obstacle.y + 4, obstacle.width - 28, 3);
-    ctx.fillStyle = "#d7ebff";
-    ctx.fillRect(obstacle.x + obstacle.width - 10, obstacle.y + 8, 2, 2);
-  }
-
-  function drawTree(obstacle) {
-    ctx.fillStyle = obstacle.blinkMs > 0 && Math.floor(obstacle.blinkMs / 35) % 2 ? "#ffffff" : "#654328";
-    const trunkX = obstacle.x + Math.floor(obstacle.width / 2) - 4;
-    ctx.fillRect(trunkX, obstacle.y + obstacle.height * 0.45, 8, obstacle.height * 0.55);
-    ctx.fillStyle = "#3e7c2e";
-    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height * 0.55);
-    ctx.fillStyle = "#5baa3e";
-    ctx.fillRect(obstacle.x + 4, obstacle.y + 4, obstacle.width - 8, obstacle.height * 0.2);
-  }
-
-  function drawCactus(obstacle) {
-    ctx.fillStyle = obstacle.blinkMs > 0 && Math.floor(obstacle.blinkMs / 35) % 2 ? "#ffffff" : "#4baa2f";
-    ctx.fillRect(obstacle.x + 6, obstacle.y, obstacle.width - 12, obstacle.height);
-    ctx.fillRect(obstacle.x, obstacle.y + obstacle.height * 0.35, 8, 12);
-    ctx.fillRect(obstacle.x + obstacle.width - 8, obstacle.y + obstacle.height * 0.48, 8, 12);
-    ctx.fillStyle = "#78db54";
-    ctx.fillRect(obstacle.x + 8, obstacle.y + 3, 2, obstacle.height - 8);
-  }
-
-  function drawCreeper(obstacle) {
-    const blink = obstacle.blinkMs > 0 && Math.floor(obstacle.blinkMs / 40) % 2 === 0;
-    ctx.fillStyle = blink ? "#ffffff" : "#58b15f";
-    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-    ctx.fillStyle = blink ? "#d9d9d9" : "#75d37a";
-    ctx.fillRect(obstacle.x + 2, obstacle.y + 3, obstacle.width - 4, obstacle.height * 0.35);
-    ctx.fillStyle = "#1c2c1f";
-    ctx.fillRect(obstacle.x + 5, obstacle.y + 12, 4, 4);
-    ctx.fillRect(obstacle.x + obstacle.width - 9, obstacle.y + 12, 4, 4);
-    ctx.fillRect(obstacle.x + 8, obstacle.y + 18, 6, 8);
-    ctx.fillRect(obstacle.x + 6, obstacle.y + obstacle.height - 9, 4, 9);
-    ctx.fillRect(obstacle.x + obstacle.width - 10, obstacle.y + obstacle.height - 9, 4, 9);
-  }
-
-  function drawPowerItem() {
-    if (!state.itemPoder) return;
-
-    const item = state.itemPoder;
-    const bobY = Math.sin(item.bob) * 2.4;
-    const y = item.y + bobY;
-
-    if (item.tipo === POWER_TYPES.GOLDEN_APPLE) {
-      ctx.fillStyle = "#f4d65c";
-      ctx.fillRect(item.x, y, item.width, item.height);
-      ctx.fillStyle = "#ffe98a";
-      ctx.fillRect(item.x + 2, y + 2, item.width - 4, 4);
-      return;
-    }
-    if (item.tipo === POWER_TYPES.JUMP_POTION) {
-      ctx.fillStyle = "#f05eff";
-      ctx.fillRect(item.x, y, item.width, item.height);
-      ctx.fillStyle = "#ff9ef2";
-      ctx.fillRect(item.x + 2, y + 2, item.width - 4, 4);
-      return;
-    }
-
-    ctx.fillStyle = "#1a0033";
-    ctx.fillRect(item.x, y, item.width, item.height);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(item.x + 4, y + 4, 2, 2);
-    ctx.fillRect(item.x + 8, y + 4, 2, 2);
-  }
-
-  function drawSteve(now) {
-    const blink = player.blinkTimer > 0 && Math.floor(player.blinkTimer / 45) % 2 === 0;
-    if (blink) return;
-
-    const x = Math.round(player.x);
-    const y = Math.round(player.y);
-    const crouch = player.height === player.heightDucked;
-    const legShift = !player.onGround || crouch ? 0 : (player.runFrame === 0 ? 1 : -1);
-
-    if (state.poderActivo.tipo) {
-      const pulse = (Math.sin(now * 0.03) + 1) * 0.5;
-      const auraAlpha = 0.18 + pulse * 0.24;
-      const auraColor = state.poderActivo.tipo === POWER_TYPES.GOLDEN_APPLE
-        ? `rgba(244, 214, 88, ${auraAlpha})`
-        : state.poderActivo.tipo === POWER_TYPES.JUMP_POTION
-        ? `rgba(240, 94, 255, ${auraAlpha})`
-        : `rgba(225, 225, 255, ${auraAlpha})`;
-      ctx.fillStyle = auraColor;
-      ctx.fillRect(x - 8, y - 8, player.width + 16, player.height + 16);
-    }
-
-    ctx.fillStyle = "#e7b088";
-    ctx.fillRect(x + 5, y, 14, 12);
-    ctx.fillStyle = "#5f3f24";
-    ctx.fillRect(x + 5, y, 14, 4);
-
-    if (state.poderActivo.tipo === POWER_TYPES.HEROBRINE) {
-      ctx.save();
-      ctx.shadowColor = "#ffffff";
-      ctx.shadowBlur = 10;
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(x + 8, y + 6, 3, 2);
-      ctx.fillRect(x + 13, y + 6, 3, 2);
-      ctx.restore();
-    }
-
-    ctx.fillStyle = "#4aa9c7";
-    ctx.fillRect(x + 2, y + 12, 20, 16);
-
-    ctx.fillStyle = "#3a53b5";
-    const legTop = y + 28;
-    ctx.fillRect(x + 4, legTop, 7, player.height - 28);
-    ctx.fillRect(x + 13, legTop, 7, player.height - 28);
-
-    if (!crouch) {
-      ctx.fillStyle = "#3347a2";
-      ctx.fillRect(x + 4 + legShift, legTop + 10, 7, player.height - 38);
-      ctx.fillRect(x + 13 - legShift, legTop + 10, 7, player.height - 38);
-    }
-  }
-
   function drawSky() {
-    if (state.poderActivo.tipo === POWER_TYPES.HEROBRINE) {
-      ctx.fillStyle = "#1a0033";
-      ctx.fillRect(0, 0, CONFIG.width, CONFIG.groundTop);
-
-      if (Math.random() < 0.1) {
-        const boltX = Math.random() * (CONFIG.width - 30) + 15;
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(boltX, 18, 2, 26);
-        ctx.fillRect(boltX - 3, 38, 6, 2);
-        ctx.fillRect(boltX + 4, 40, 2, 18);
-      }
-      return;
-    }
-
     const { top, bottom, tod } = getSkyColors();
     const grad = ctx.createLinearGradient(0, 0, 0, CONFIG.groundTop);
     grad.addColorStop(0, top);
@@ -173,12 +34,6 @@ export function createRenderer(game, ctx) {
           ctx.fillRect(Math.round(star.x), Math.round(star.y), 2, 2);
         }
       }
-
-      const moonX = CONFIG.width - 58;
-      ctx.fillStyle = `rgba(235, 236, 215, ${0.7 * alpha})`;
-      ctx.fillRect(moonX, 36, 18, 18);
-      ctx.fillStyle = `rgba(156, 176, 215, ${0.5 * alpha})`;
-      ctx.fillRect(moonX + 8, 40, 8, 8);
     }
   }
 
@@ -223,20 +78,110 @@ export function createRenderer(game, ctx) {
     }
   }
 
+  function drawTree(obstacle) {
+    const trunkX = obstacle.x + Math.floor(obstacle.width / 2) - 4;
+    ctx.fillStyle = "#654328";
+    ctx.fillRect(trunkX, obstacle.y + obstacle.height * 0.45, 8, obstacle.height * 0.55);
+    ctx.fillStyle = "#3e7c2e";
+    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height * 0.55);
+    ctx.fillStyle = "#5baa3e";
+    ctx.fillRect(obstacle.x + 4, obstacle.y + 4, obstacle.width - 8, obstacle.height * 0.2);
+  }
+
+  function drawCactus(obstacle) {
+    ctx.fillStyle = "#4baa2f";
+    ctx.fillRect(obstacle.x + 6, obstacle.y, obstacle.width - 12, obstacle.height);
+    ctx.fillRect(obstacle.x, obstacle.y + obstacle.height * 0.35, 8, 12);
+    ctx.fillRect(obstacle.x + obstacle.width - 8, obstacle.y + obstacle.height * 0.48, 8, 12);
+    ctx.fillStyle = "#78db54";
+    ctx.fillRect(obstacle.x + 8, obstacle.y + 3, 2, obstacle.height - 8);
+  }
+
+  function drawPhantom(obstacle) {
+    const flap = Math.sin((state.score + obstacle.x) * 0.06) > 0 ? 2 : -1;
+    ctx.fillStyle = "#4f607d";
+    ctx.fillRect(obstacle.x + 8, obstacle.y + 6, obstacle.width - 16, obstacle.height - 6);
+    ctx.fillRect(obstacle.x + 2, obstacle.y + 8 + flap, 10, 4);
+    ctx.fillRect(obstacle.x + obstacle.width - 12, obstacle.y + 8 - flap, 10, 4);
+    ctx.fillStyle = "#8cb2ff";
+    ctx.fillRect(obstacle.x + 14, obstacle.y + 4, obstacle.width - 28, 3);
+    ctx.fillStyle = "#d7ebff";
+    ctx.fillRect(obstacle.x + obstacle.width - 10, obstacle.y + 8, 2, 2);
+  }
+
+  function drawCreeper(obstacle) {
+    ctx.fillStyle = obstacle.blinkMs > 0 && ((performance.now() / 90) | 0) % 2 === 0 ? "#f9f7a8" : "#58b15f";
+    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+    ctx.fillStyle = "#1d381f";
+    ctx.fillRect(obstacle.x + 5, obstacle.y + 10, 4, 4);
+    ctx.fillRect(obstacle.x + obstacle.width - 9, obstacle.y + 10, 4, 4);
+    ctx.fillRect(obstacle.x + obstacle.width * 0.42, obstacle.y + 18, 6, 10);
+  }
+
   function drawObstacle(obstacle) {
-    if (obstacle.type === "phantom") {
-      drawPhantom(obstacle);
-      return;
-    }
-    if (obstacle.type === "tree") {
-      drawTree(obstacle);
-      return;
-    }
-    if (obstacle.type === "cactus") {
-      drawCactus(obstacle);
-      return;
-    }
+    if (obstacle.type === "tree") return drawTree(obstacle);
+    if (obstacle.type === "cactus") return drawCactus(obstacle);
+    if (obstacle.type === "phantom") return drawPhantom(obstacle);
     drawCreeper(obstacle);
+  }
+
+  function drawPowerItem() {
+    if (!state.itemPoder) return;
+
+    const item = state.itemPoder;
+    const bobY = Math.sin(item.bob) * 2.4;
+    const y = item.y + bobY;
+
+    if (item.tipo === POWER_TYPES.GOLDEN_APPLE) {
+      ctx.fillStyle = "#f4d65c";
+      ctx.fillRect(item.x, y, item.width, item.height);
+      ctx.fillStyle = "#ffe98a";
+      ctx.fillRect(item.x + 2, y + 2, item.width - 4, 4);
+      return;
+    }
+
+    ctx.fillStyle = "#f05eff";
+    ctx.fillRect(item.x, y, item.width, item.height);
+    ctx.fillStyle = "#ff9ef2";
+    ctx.fillRect(item.x + 2, y + 2, item.width - 4, 4);
+  }
+
+  function drawSteve(steve) {
+    if (!steve || !steve.vivo) return;
+
+    const x = Math.round(steve.x);
+    const y = Math.round(steve.y);
+
+    if (state.poderActivo.tipo) {
+      const auraColor = state.poderActivo.tipo === POWER_TYPES.GOLDEN_APPLE
+        ? "rgba(244, 214, 88, 0.24)"
+        : "rgba(240, 94, 255, 0.24)";
+      ctx.fillStyle = auraColor;
+      ctx.fillRect(x - 8, y - 8, steve.width + 16, steve.height + 16);
+    }
+
+    ctx.fillStyle = "#e7b088";
+    ctx.fillRect(x + 5, y, 14, 12);
+    ctx.fillStyle = "#5f3f24";
+    ctx.fillRect(x + 5, y, 14, 4);
+
+    ctx.fillStyle = "#4aa9c7";
+    ctx.fillRect(x + 2, y + 12, 20, 16);
+
+    ctx.fillStyle = "#3a53b5";
+    const legTop = y + 28;
+    ctx.fillRect(x + 4, legTop, 7, steve.height - 28);
+    ctx.fillRect(x + 13, legTop, 7, steve.height - 28);
+  }
+
+  function drawSteves() {
+    if (state.aiTraining) {
+      for (const steve of state.steves) {
+        drawSteve(steve);
+      }
+      return;
+    }
+    drawSteve(state.manualSteve);
   }
 
   function drawParticles() {
@@ -250,93 +195,104 @@ export function createRenderer(game, ctx) {
   }
 
   function drawUI() {
-    const panelWidth = Math.min(320, CONFIG.width - 20);
+    const panelWidth = Math.min(360, CONFIG.width - 20);
 
-    ctx.fillStyle = "rgba(12, 18, 16, 0.55)";
-    ctx.fillRect(10, 10, panelWidth, 74);
+    ctx.fillStyle = "rgba(12, 18, 16, 0.58)";
+    ctx.fillRect(10, 10, panelWidth, 88);
     ctx.strokeStyle = "rgba(155, 190, 175, 0.65)";
-    ctx.strokeRect(10, 10, panelWidth, 74);
+    ctx.strokeRect(10, 10, panelWidth, 88);
 
     ctx.fillStyle = "#effff6";
     ctx.font = "bold 14px monospace";
     ctx.fillText(`SCORE: ${Math.floor(state.score)}`, 20, 31);
-    ctx.fillText(`HIGHSCORE: ${Math.max(state.highScore, Math.floor(state.score))}`, 20, 51);
+    ctx.fillText(`BEST: ${Math.max(state.highScore, Math.floor(state.score))}`, 20, 51);
 
-    if (state.poderActivo.tipo) {
-      const secs = Math.ceil(state.poderActivo.tiempoRestante / 60);
-      const isApple = state.poderActivo.tipo === POWER_TYPES.GOLDEN_APPLE;
-      const isHerobrine = state.poderActivo.tipo === POWER_TYPES.HEROBRINE;
-      ctx.fillStyle = isApple ? "#ffe28f" : isHerobrine ? "#ffffff" : "#ffb8f8";
-      ctx.font = "bold 12px monospace";
-      ctx.fillText(`PODER: ${state.poderActivo.tipo} (${secs}s)`, 20, 72);
+    if (state.aiTraining) {
+      ctx.fillStyle = "#97f08a";
+      ctx.fillText(`GEN: ${state.generation} | VIVOS: ${state.aliveCount}/${CONFIG.population}`, 20, 71);
     } else {
-      ctx.fillStyle = "#a3b3ab";
-      ctx.font = "bold 12px monospace";
-      ctx.fillText("PODER: NINGUNO", 20, 72);
+      ctx.fillStyle = "#ffb2b2";
+      ctx.fillText("MODO MANUAL", 20, 71);
     }
 
+    const powerText = state.poderActivo.tipo
+      ? `PODER: ${state.poderActivo.tipo}`
+      : "PODER: NINGUNO";
+    ctx.fillStyle = "#d8e4db";
     ctx.font = "bold 12px monospace";
-    ctx.fillStyle = state.biome === "desert" ? "#ffdf95" : "#97f08a";
-    ctx.fillText(`BIOMA: ${state.biome === "desert" ? "DESIERTO" : "PRADERA"}`, CONFIG.width - 142, 96);
+    ctx.fillText(powerText, 20, 89);
   }
 
   function drawGameOver() {
-    if (state.running && state.gameOverAlpha <= 0) return;
+    if (state.running || state.aiTraining) return;
 
-    ctx.fillStyle = `rgba(0, 0, 0, ${state.gameOverAlpha})`;
+    ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0.45, state.gameOverAlpha)})`;
     ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
 
-    const centerY = CONFIG.height * 0.5;
     ctx.textAlign = "center";
     ctx.fillStyle = "#ff7b7b";
     ctx.font = "bold 32px monospace";
-    ctx.fillText("GAME OVER", CONFIG.width / 2, centerY - 62);
+    ctx.fillText("GAME OVER", CONFIG.width / 2, CONFIG.height * 0.44);
 
     ctx.fillStyle = "#f5f5f5";
     ctx.font = "bold 15px monospace";
-    ctx.fillText(`PUNTAJE FINAL: ${Math.floor(state.score)}`, CONFIG.width / 2, centerY - 16);
-    ctx.fillText(`HIGHSCORE: ${state.highScore}`, CONFIG.width / 2, centerY + 12);
-
-    ctx.fillStyle = "#d2ffd7";
-    ctx.font = "bold 14px monospace";
-    ctx.fillText("ESPACIO PARA REINICIAR", CONFIG.width / 2, centerY + 52);
+    ctx.fillText("ESPACIO PARA REINICIAR", CONFIG.width / 2, CONFIG.height * 0.56);
     ctx.textAlign = "start";
   }
 
-  function drawStreamAlert(now) {
+  function drawStreamAlert() {
     if (state.streamFx.timerFrames <= 0 || !state.streamFx.text) return;
-
-    const blinkOn = Math.floor(now / 120) % 2 === 0;
-    if (!blinkOn) return;
 
     ctx.textAlign = "center";
     ctx.font = "bold 15px monospace";
     ctx.fillStyle = "#ffffff";
     ctx.strokeStyle = "#3a004f";
     ctx.lineWidth = 3;
-    ctx.strokeText(state.streamFx.text, CONFIG.width / 2, 128);
-    ctx.fillText(state.streamFx.text, CONFIG.width / 2, 128);
+    ctx.strokeText(state.streamFx.text, CONFIG.width / 2, 126);
+    ctx.fillText(state.streamFx.text, CONFIG.width / 2, 126);
     ctx.textAlign = "start";
   }
 
-  function render(now) {
+  function drawSpeedToast() {
+    const toast = state.streamSpeed;
+    if (!toast || toast.toastMs <= 0 || !toast.toastText) return;
+
+    const progress = 1 - toast.toastMs / toast.toastDurationMs;
+    const alpha = clamp(1 - progress * 1.25, 0, 1);
+    const zoom = progress < 0.34
+      ? 0.7 + (progress / 0.34) * 0.58
+      : 1.28 - ((progress - 0.34) / 0.66) * 0.25;
+
+    ctx.save();
+    ctx.translate(CONFIG.width * 0.5, CONFIG.height * 0.44);
+    ctx.scale(zoom, zoom);
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "bold 54px monospace";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.fillText(toast.toastText, 3, 3);
+    ctx.fillStyle = toast.toastColor;
+    ctx.fillText(toast.toastText, 0, 0);
+    ctx.restore();
+
+    ctx.globalAlpha = 1;
+    ctx.textAlign = "start";
+    ctx.textBaseline = "alphabetic";
+  }
+
+  function render() {
     drawSky();
     drawParallax();
     drawGround();
 
     state.obstacles.forEach(drawObstacle);
     drawPowerItem();
-
-    drawSteve(now);
+    drawSteves();
     drawParticles();
     drawUI();
-    drawStreamAlert(now);
-
-    if (state.impactFlashMs > 0) {
-      ctx.fillStyle = `rgba(255, 255, 255, ${state.impactFlashMs / 300})`;
-      ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
-    }
-
+    drawStreamAlert();
+    drawSpeedToast();
     drawGameOver();
   }
 

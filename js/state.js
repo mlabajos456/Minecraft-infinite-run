@@ -1,15 +1,17 @@
-import { rand, lerp, rgbString } from "./utils.js";
+﻿import { rand, lerp, rgbString } from "./utils.js";
 
-export function createGameContext({ canvas, modePill, CONFIG, COLORS }) {
+export function createGameContext({ canvas, modePill, speedPill, CONFIG, COLORS }) {
   const state = {
     running: true,
-    autopilot: true,
+    aiTraining: true,
     score: 0,
     highScore: Number(localStorage.getItem(CONFIG.highScoreKey) || 0),
     speed: CONFIG.baseSpeed,
+    generation: 1,
+    aliveCount: CONFIG.population,
     lastTimestamp: 0,
     obstacleTimer: 0,
-    obstacleInterval: 72,
+    obstacleInterval: CONFIG.obstacleBaseInterval,
     dustTimer: 0,
     stars: [],
     clouds: [],
@@ -31,10 +33,21 @@ export function createGameContext({ canvas, modePill, CONFIG, COLORS }) {
       text: "",
       timerFrames: 0
     },
+    streamSpeed: {
+      levelIndex: 0,
+      silenceMs: 0,
+      levels: CONFIG.streamSpeedLevels.slice(),
+      toastMs: 0,
+      toastDurationMs: CONFIG.streamSpeedToastMs,
+      toastText: "",
+      toastColor: "#8fff9b"
+    },
     gameOverTimerMs: 0,
     gameOverHasInput: false,
     itemPoder: null,
-    powerRollBlock: -1
+    powerRollBlock: -1,
+    steves: [],
+    manualSteve: null
   };
 
   const input = {
@@ -42,58 +55,37 @@ export function createGameContext({ canvas, modePill, CONFIG, COLORS }) {
     duckHeld: false
   };
 
-  const player = {
-    x: 96,
-    y: CONFIG.groundTop - 48,
-    width: 24,
-    heightStanding: 48,
-    heightDucked: 34,
-    height: 48,
-    vy: 0,
-    onGround: true,
-    runFrame: 0,
-    runFrameTimer: 0,
-    blinkTimer: 0,
-    forcedDuckUntilX: null,
-    canJump() {
-      return this.onGround;
-    },
-    getAABB() {
-      return {
-        x: this.x,
-        y: this.y,
-        width: this.width,
-        height: this.height
-      };
-    }
-  };
-
   function updateModeIndicator() {
-    if (state.autopilot) {
-      modePill.textContent = "🤖 IA AUTOPILOTO";
+    if (state.aiTraining) {
+      modePill.textContent = "IA ENTRENAMIENTO";
       modePill.classList.remove("manual");
       modePill.style.color = "#93ffb8";
       return;
     }
 
-    modePill.textContent = "🎮 MANUAL";
+    modePill.textContent = "MODO MANUAL";
     modePill.classList.add("manual");
     modePill.style.color = "#ff9f9f";
   }
 
-  function disableAutopilot() {
-    if (!state.autopilot) return;
-    state.autopilot = false;
-    player.forcedDuckUntilX = null;
+  function updateSpeedIndicator() {
+    const level = state.streamSpeed.levels[state.streamSpeed.levelIndex] || 1;
+    speedPill.textContent = `SIM x${level}`;
+    speedPill.style.color = level > 1 ? "#9cffaa" : "#d8e9dd";
+  }
+
+  function disableTrainingMode() {
+    if (!state.aiTraining) return;
+    state.aiTraining = false;
     updateModeIndicator();
   }
 
-  function resetRun() {
+  function resetCommonRunState() {
     state.running = true;
     state.score = 0;
     state.speed = CONFIG.baseSpeed;
     state.obstacleTimer = 0;
-    state.obstacleInterval = 70;
+    state.obstacleInterval = CONFIG.obstacleBaseInterval;
     state.particles.length = 0;
     state.obstacles.length = 0;
     state.gameOverAlpha = 0;
@@ -109,55 +101,54 @@ export function createGameContext({ canvas, modePill, CONFIG, COLORS }) {
     state.gameOverHasInput = false;
     state.itemPoder = null;
     state.powerRollBlock = -1;
+    state.dustTimer = 0;
+  }
 
-    player.y = CONFIG.groundTop - player.heightStanding;
-    player.height = player.heightStanding;
-    player.vy = 0;
-    player.onGround = true;
-    player.runFrame = 0;
-    player.runFrameTimer = 0;
-    player.blinkTimer = 0;
-    player.forcedDuckUntilX = null;
-
-    input.jumpPressed = false;
-    input.duckHeld = false;
+  function resetStreamSpeed() {
+    state.streamSpeed.levelIndex = 0;
+    state.streamSpeed.silenceMs = 0;
+    state.streamSpeed.toastMs = 0;
+    state.streamSpeed.toastText = "";
+    state.streamSpeed.toastColor = "#8fff9b";
+    updateSpeedIndicator();
   }
 
   function createBackground() {
-    state.clouds = Array.from({ length: 6 }, () => ({
+    state.clouds = Array.from({ length: 8 }, () => ({
       x: rand(0, CONFIG.width),
-      y: rand(28, 100),
-      w: rand(24, 44),
-      h: rand(10, 18),
-      speed: rand(0.15, 0.35)
+      y: rand(24, 120),
+      w: rand(26, 54),
+      h: rand(12, 18),
+      speed: rand(0.18, 0.45)
     }));
 
     state.mountains = Array.from({ length: 7 }, (_, i) => ({
-      x: i * 140 + rand(-20, 40),
-      w: rand(90, 150),
-      h: rand(30, 70),
-      speed: rand(0.65, 1.2)
+      x: i * 160 + rand(-28, 24),
+      y: CONFIG.groundTop - rand(80, 126),
+      w: rand(120, 200),
+      h: rand(48, 92),
+      speed: rand(0.35, 0.85)
     }));
 
-    state.stars = Array.from({ length: 45 }, () => ({
+    state.stars = Array.from({ length: 54 }, () => ({
       x: rand(0, CONFIG.width),
-      y: rand(10, 158),
+      y: rand(12, 170),
       twinkle: rand(0, Math.PI * 2)
     }));
   }
 
   function getTimeOfDay(score) {
-    const cycle = (score / 1800) % 1;
-    if (cycle < 0.35) {
-      return { phase: "day", t: cycle / 0.35 };
+    const cycle = (score / 2400) % 1;
+    if (cycle < 0.33) {
+      return { phase: "day", t: cycle / 0.33 };
     }
     if (cycle < 0.57) {
-      return { phase: "sunset", t: (cycle - 0.35) / 0.22 };
+      return { phase: "sunset", t: (cycle - 0.33) / 0.24 };
     }
-    if (cycle < 0.9) {
-      return { phase: "night", t: (cycle - 0.57) / 0.33 };
+    if (cycle < 0.87) {
+      return { phase: "night", t: (cycle - 0.57) / 0.3 };
     }
-    return { phase: "dawn", t: (cycle - 0.9) / 0.1 };
+    return { phase: "dawn", t: (cycle - 0.87) / 0.13 };
   }
 
   function isNightPhase() {
@@ -167,25 +158,22 @@ export function createGameContext({ canvas, modePill, CONFIG, COLORS }) {
   function getSkyColors() {
     const tod = getTimeOfDay(state.score);
     let top = COLORS.day;
-    let bottom = [182, 225, 255];
+    let bottom = [186, 229, 255];
 
-    if (tod.phase === "day") {
-      top = COLORS.day;
-      bottom = [184, 230, 255];
-    } else if (tod.phase === "sunset") {
+    if (tod.phase === "sunset") {
       top = [
         lerp(COLORS.day[0], COLORS.sunsetA[0], tod.t),
         lerp(COLORS.day[1], COLORS.sunsetA[1], tod.t),
         lerp(COLORS.day[2], COLORS.sunsetA[2], tod.t)
       ];
       bottom = [
-        lerp(184, COLORS.sunsetB[0], tod.t),
-        lerp(230, COLORS.sunsetB[1], tod.t),
+        lerp(186, COLORS.sunsetB[0], tod.t),
+        lerp(229, COLORS.sunsetB[1], tod.t),
         lerp(255, COLORS.sunsetB[2], tod.t)
       ];
     } else if (tod.phase === "night") {
       top = COLORS.night;
-      bottom = [28, 52, 98];
+      bottom = [34, 58, 102];
     } else if (tod.phase === "dawn") {
       top = [
         lerp(COLORS.night[0], COLORS.day[0], tod.t),
@@ -193,9 +181,9 @@ export function createGameContext({ canvas, modePill, CONFIG, COLORS }) {
         lerp(COLORS.night[2], COLORS.day[2], tod.t)
       ];
       bottom = [
-        lerp(28, 184, tod.t),
-        lerp(52, 230, tod.t),
-        lerp(98, 255, tod.t)
+        lerp(34, 186, tod.t),
+        lerp(58, 229, tod.t),
+        lerp(102, 255, tod.t)
       ];
     }
 
@@ -207,11 +195,12 @@ export function createGameContext({ canvas, modePill, CONFIG, COLORS }) {
     CONFIG,
     COLORS,
     state,
-    player,
     input,
     updateModeIndicator,
-    disableAutopilot,
-    resetRun,
+    updateSpeedIndicator,
+    disableTrainingMode,
+    resetCommonRunState,
+    resetStreamSpeed,
     createBackground,
     getSkyColors,
     isNightPhase

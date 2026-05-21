@@ -1,6 +1,12 @@
-export function bindInput(game, actions) {
-  const { state, input, disableAutopilot, resetRun } = game;
-  const { tryActivateHerobrine } = actions;
+﻿export function bindInput(game, actions) {
+  const { state, input, disableTrainingMode } = game;
+  const { switchToManual, resetManualRun, tryActivateHerobrine } = actions;
+
+  function forceManualMode() {
+    if (!state.aiTraining) return;
+    disableTrainingMode();
+    switchToManual();
+  }
 
   function onKeyDown(event) {
     const code = event.code;
@@ -11,32 +17,35 @@ export function bindInput(game, actions) {
 
     if (code === "Space") {
       event.preventDefault();
-      if (!state.running) {
-        resetRun();
+      if (!state.running && !state.aiTraining) {
+        resetManualRun();
         return;
       }
-      disableAutopilot();
+      forceManualMode();
       input.jumpPressed = true;
+      return;
     }
 
     if (code === "ArrowUp" || code === "KeyW") {
-      disableAutopilot();
+      forceManualMode();
       input.jumpPressed = true;
+      return;
     }
 
     if (code === "ArrowDown" || code === "KeyS") {
-      disableAutopilot();
+      forceManualMode();
       input.duckHeld = true;
+      return;
     }
 
     if (code === "ArrowLeft" || code === "ArrowRight") {
-      disableAutopilot();
+      forceManualMode();
+      return;
     }
 
     if (code === "KeyH") {
       tryActivateHerobrine();
     }
-
   }
 
   function onKeyUp(event) {
